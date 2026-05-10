@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Lobby · Bingo de festa{% endblock %}
+{% block content %}
+<div class="eyebrow">Lobby</div>
+<h1>{{ game.name }}</h1>
+<p>Esperant que l'admin engegui la partida. Passa la contrasenya d'entrada a la resta perquè s'apuntin.</p>
+
+<div class="box">
+  <h2>Jugadors apuntats · {{ players|length }}</h2>
+  {% if players|length < 3 %}
+    <p style="color: var(--ink-dim);">Calen mínim 3 jugadors per començar.</p>
+  {% endif %}
+  <ul class="player-list">
+    {% for p in players %}
+      <li class="{% if p.id == current_user.id %}you{% endif %} {% if p.is_admin %}admin-row{% endif %}">
+        <span>{{ p.name }}{% if p.id == current_user.id %} (tu){% endif %}</span>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% if current_user.is_admin %}
+  <div class="box box-pink">
+    <h3>Ets l'admin</h3>
+    <p>Quan ja hi sigui tothom, vés al panell per engegar la fase 1.</p>
+    <a href="{{ url_for('admin') }}" class="btn">Anar al panell</a>
+  </div>
+{% endif %}
+
+<p style="color: var(--ink-dim); font-size: 0.85rem; margin-top: 2rem;">Aquesta pàgina es refresca sola cada 5 segons.</p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  setInterval(async () => {
+    try {
+      const r = await fetch("{{ url_for('state') }}");
+      const data = await r.json();
+      if (data.phase !== 0) location.reload();
+    } catch (e) {}
+  }, 5000);
+</script>
+{% endblock %}
