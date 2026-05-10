@@ -416,11 +416,16 @@ def create_app():
     def reset_game():
         """Wipe the current game state (users, cards) so a new game can start."""
         g = current_user.game
-        BingoCard.query.filter_by(game_id=g.id).delete()
-        User.query.filter_by(game_id=g.id).delete()
+        # IMPORTANT: clear FKs from Game to User BEFORE deleting users, otherwise
+        # Postgres rejects the delete (Game.line_winner_id / full_winner_id still
+        # reference the user). SQLite doesn't enforce FKs by default so this only
+        # bites in production.
         g.phase = 0
         g.line_winner_id = None
         g.full_winner_id = None
+        db.session.flush()
+        BingoCard.query.filter_by(game_id=g.id).delete()
+        User.query.filter_by(game_id=g.id).delete()
         db.session.commit()
         logout_user()
         flash("Partida reiniciada. Torneu-vos a registrar tots.", "ok")
