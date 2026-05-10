@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Registre · Bingo de festa{% endblock %}
+{% block content %}
+<div class="box" style="max-width: 480px; margin: 0 auto;">
+  <div class="eyebrow">Apunta't a la partida</div>
+  <h2>Registre</h2>
+  <form method="POST" action="{{ url_for('register') }}">
+    <div class="field">
+      <label for="name">El teu nom</label>
+      <input type="text" id="name" name="name" maxlength="80" required autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="password">Contrasenya teva</label>
+      <input type="password" id="password" name="password" required>
+      <div class="help">La que vulguis. La fas servir per tornar a entrar després.</div>
+    </div>
+    <div class="field">
+      <label for="join_password">Contrasenya d'entrada</label>
+      <input type="password" id="join_password" name="join_password" required autocomplete="off">
+      <div class="help">La que t'ha passat l'admin.</div>
+    </div>
+    <details style="margin: 1rem 0;">
+      <summary style="cursor: pointer; color: var(--ink-dim);">Soc l'admin (opcional)</summary>
+      <div class="field" style="margin-top: 0.5rem;">
+        <label for="admin_password">Contrasenya d'admin</label>
+        <input type="password" id="admin_password" name="admin_password">
+        <div class="help">Només si vols controlar les fases de la partida.</div>
+      </div>
+    </details>
+    <button type="submit" class="btn">Entrar</button>
+    <a href="{{ url_for('login') }}" class="nav-link" style="margin-left: 1rem;">Ja tinc compte →</a>
+  </form>
+</div>
+{% endblock %}

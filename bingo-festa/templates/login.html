@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Entrar · Bingo de festa{% endblock %}
+{% block content %}
+<div class="box box-lime" style="max-width: 480px; margin: 0 auto;">
+  <div class="eyebrow">Has tornat</div>
+  <h2>Entrar</h2>
+  <form method="POST" action="{{ url_for('login') }}">
+    <div class="field">
+      <label for="name">El teu nom</label>
+      <input type="text" id="name" name="name" required autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="password">Contrasenya</label>
+      <input type="password" id="password" name="password" required>
+    </div>
+    <button type="submit" class="btn btn-lime">Entrar</button>
+    <a href="{{ url_for('register') }}" class="nav-link" style="margin-left: 1rem;">No tinc compte →</a>
+  </form>
+</div>
+{% endblock %}
