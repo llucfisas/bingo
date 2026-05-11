@@ -1,6 +1,30 @@
 {% extends "base.html" %}
 {% block title %}Fase 2 · A jugar!{% endblock %}
 {% block content %}
+<style>
+  .toast {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translate(-50%, -150%);
+    background: var(--bg-card);
+    color: var(--ink);
+    padding: 1rem 1.5rem;
+    border: 3px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+    font-family: 'Bowlby One', sans-serif;
+    font-size: 1.2rem;
+    text-align: center;
+    z-index: 2000;
+    transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
+    max-width: 90vw;
+    white-space: nowrap;
+  }
+  .toast.toast-show { transform: translate(-50%, 0); }
+  .toast-line { background: var(--yellow); color: var(--bg); }
+  .toast-bingo { background: var(--lime); color: var(--bg); font-size: 1.5rem; }
+</style>
+
 {% if played %}
   <div class="eyebrow">Fase 2 · Has rebut un cartró</div>
   <h1>Vigila a <span style="color: var(--lime);">{{ played.target.name }}</span></h1>
@@ -23,15 +47,61 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <script>
   const phase = {{ game.phase }};
   const grid = document.getElementById('play-grid');
+
+  function showToast(text, type) {
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.textContent = text;
+    document.body.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('toast-show'));
+    setTimeout(() => {
+      t.classList.remove('toast-show');
+      setTimeout(() => t.remove(), 500);
+    }, 5000);
+  }
+
+  function fireConfetti() {
+    if (typeof confetti === 'undefined') return;
+    confetti({
+      particleCount: 140,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: ['#ff2e93', '#c8ff2e', '#ffd62e', '#7c3aed']
+    });
+  }
+
+  function fireFireworks() {
+    if (typeof confetti === 'undefined') return;
+    const duration = 4000;
+    const end = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 1500 };
+    function rand(min, max) { return Math.random() * (max - min) + min; }
+    const interval = setInterval(() => {
+      const timeLeft = end - Date.now();
+      if (timeLeft <= 0) return clearInterval(interval);
+      const particleCount = 50 * (timeLeft / duration);
+      confetti(Object.assign({}, defaults, {
+        particleCount,
+        origin: { x: rand(0.1, 0.3), y: Math.random() - 0.2 },
+        colors: ['#ff2e93', '#c8ff2e', '#ffd62e']
+      }));
+      confetti(Object.assign({}, defaults, {
+        particleCount,
+        origin: { x: rand(0.7, 0.9), y: Math.random() - 0.2 },
+        colors: ['#ff2e93', '#c8ff2e', '#ffd62e']
+      }));
+    }, 250);
+  }
+
   if (grid && phase === 2) {
     grid.addEventListener('click', async (e) => {
       const slot = e.target.closest('.slot');
       if (!slot) return;
-      // Si ja està marcada, no fa res (no es pot desmarcar)
-      if (slot.classList.contains('marked')) return;
+      if (slot.classList.contains('marked')) return; // no desmarcar
       const idx = slot.dataset.idx;
       try {
         const r = await fetch("{{ url_for('mark_slot') }}", {
@@ -45,12 +115,20 @@
           data.marks.forEach((m, i) => {
             slots[i].classList.toggle('marked', m);
           });
+          // Celebracions només per al jugador que ho ha fet
+          if (data.just_made_bingo) {
+            fireFireworks();
+            showToast("🏆 BINGO! Has omplert el cartró", "bingo");
+          } else if (data.just_made_line) {
+            fireConfetti();
+            showToast("⚡ Has fet línia!", "line");
+          }
         }
       } catch (err) {}
     });
   }
 
-  // Polling només per detectar canvi de fase (p.ex. admin acaba la partida)
+  // Polling només per detectar canvi de fase (admin acaba la partida)
   setInterval(async () => {
     try {
       const r = await fetch("{{ url_for('state') }}");
