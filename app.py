@@ -292,17 +292,29 @@ def create_app():
         if not (0 <= idx < 9):
             return jsonify({"ok": False, "error": "Bad index"}), 400
 
+        just_made_line = False
+        just_made_bingo = False
+
         marks = card.marks
         # Un cop marcada, NO es pot desmarcar
         if not marks[idx]:
+            had_line_before = card.has_line()
+            was_full_before = card.is_full()
+
             marks[idx] = True
             card.marks = marks
 
-            # Es continua trackant guanyadors per la vista de l'admin,
-            # però ja no es notifica res als jugadors.
-            if g.line_winner_id is None and card.has_line():
+            has_line_now = card.has_line()
+            is_full_now = card.is_full()
+
+            # Detecta el moment exacte de fer línia/bingo (per disparar
+            # confeti/focs només al jugador que ho fa, no a la resta).
+            just_made_line = not had_line_before and has_line_now
+            just_made_bingo = not was_full_before and is_full_now
+
+            if g.line_winner_id is None and has_line_now:
                 g.line_winner_id = current_user.id
-            if g.full_winner_id is None and card.is_full():
+            if g.full_winner_id is None and is_full_now:
                 g.full_winner_id = current_user.id
 
             db.session.commit()
@@ -311,8 +323,9 @@ def create_app():
             "ok": True,
             "marks": card.marks,
             "phase": g.phase,
+            "just_made_line": just_made_line,
+            "just_made_bingo": just_made_bingo,
         })
-
     @app.route("/state")
     @login_required
     def state():
