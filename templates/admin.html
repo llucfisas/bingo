@@ -51,11 +51,47 @@
   {% endif %}
 </div>
 
+{% if game.phase >= 2 and leaderboard %}
+  <div class="box box-lime">
+    <h2>🏆 Classificació</h2>
+    <p style="color: var(--ink-dim); font-size: 0.85rem;">Ordenada per caselles marcades. Tu sí que veus qui guanya, els jugadors no.</p>
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Jugador</th>
+          <th>Vigila a</th>
+          <th>Cartró creat per</th>
+          <th>Marques</th>
+          <th>Estat</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for card in leaderboard %}
+          <tr>
+            <td><strong>{{ loop.index }}</strong></td>
+            <td><strong>{{ card.player.name }}</strong></td>
+            <td>{{ card.target.name }}</td>
+            <td style="color: var(--ink-dim);">{{ card.creator.name }}</td>
+            <td><strong>{{ card.marks|select|list|length }} / 9</strong></td>
+            <td>
+              {% if card.is_full() %}
+                <span class="tag tag-yes">🏆 BINGO</span>
+              {% elif card.has_line() %}
+                <span class="tag" style="background: var(--yellow); color: var(--bg);">🎯 LÍNIA</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
 <div class="box box-pink">
   <h2>Reiniciar partida</h2>
   <p style="color: var(--ink-dim);">
     Esborra <strong>tots els jugadors i cartrons</strong> i deixa l'app a punt per una partida nova.
-    Útil quan ja heu acabat i voleu jugar un altre dia.
   </p>
   <form method="POST" action="{{ url_for('reset_game') }}" onsubmit="return confirm('Segur que vols esborrar TOT (jugadors, cartrons, guanyadors)? No hi ha tornada enrere.');">
     <button class="btn btn-danger" type="submit">Reiniciar tot</button>
@@ -76,7 +112,6 @@
     </thead>
     <tbody>
       {% for u in users %}
-        {# selectattr funciona on {% set %} dins {% for %} no propagava — bug de Jinja #}
         {% set their_card = cards|selectattr('creator_id', 'equalto', u.id)|list|first %}
         <tr>
           <td>{{ u.name }}{% if u.id == current_user.id %} (tu){% endif %}</td>
@@ -105,39 +140,11 @@
     </tbody>
   </table>
 </div>
-
-{% if game.phase >= 2 %}
-  <div class="box">
-    <h2>Assignacions de fase 2</h2>
-    <p style="color: var(--ink-dim); font-size: 0.85rem;">Qui juga el cartró de qui sobre qui.</p>
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>Creador</th>
-          <th>Objectiu</th>
-          <th>Jugador</th>
-          <th>Marques</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for c in cards %}
-          <tr>
-            <td>{{ c.creator.name }}</td>
-            <td>{{ c.target.name }}</td>
-            <td>{{ c.player.name if c.player else '—' }}</td>
-            <td>{{ c.marks|select|list|length }} / 9</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // Auto-refresh cada 5s perquè vegis com es van enviant cartrons.
-  // Només si la pestanya està activa.
+  // Auto-refresh cada 5s. Només si la pestanya està activa.
   setInterval(() => {
     if (!document.hidden) {
       location.reload();
