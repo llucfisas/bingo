@@ -336,6 +336,14 @@ def create_app():
         users = User.query.filter_by(game_id=g.id).order_by(User.created_at).all()
         cards = BingoCard.query.filter_by(game_id=g.id).all()
         submitted = sum(1 for c in cards if c.submitted)
+
+        # Classificació: cartrons amb jugador assignat, ordenats per marques desc.
+        leaderboard = sorted(
+            [c for c in cards if c.player_id is not None],
+            key=lambda c: sum(c.marks),
+            reverse=True,
+        )
+
         return render_template(
             "admin.html",
             game=g,
@@ -343,6 +351,7 @@ def create_app():
             cards=cards,
             submitted=submitted,
             n_users=len(users),
+            leaderboard=leaderboard,
         )
 
     @app.route("/admin/start_phase1", methods=["POST"])
