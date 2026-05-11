@@ -301,7 +301,6 @@ def create_app():
 
         if g.full_winner_id is None and card.is_full():
             g.full_winner_id = current_user.id
-            g.phase = 3
 
         db.session.commit()
         return jsonify({
