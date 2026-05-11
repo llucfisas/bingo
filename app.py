@@ -273,43 +273,45 @@ def create_app():
         return redirect(url_for("game"))
 
     @app.route("/card/mark", methods=["POST"])
-    @login_required
-    def mark_slot():
-        g = current_user.game
-        if g.phase != 2:
-            return jsonify({"ok": False, "error": "Game not in playing phase"}), 400
-
-        card = BingoCard.query.filter_by(
-            game_id=g.id, player_id=current_user.id
-        ).first()
-        if not card:
-            return jsonify({"ok": False, "error": "No card assigned"}), 404
-
-        try:
-            idx = int(request.form.get("idx", -1))
-        except ValueError:
-            return jsonify({"ok": False, "error": "Bad index"}), 400
-        if not (0 <= idx < 9):
-            return jsonify({"ok": False, "error": "Bad index"}), 400
-
-        marks = card.marks
-        marks[idx] = not marks[idx]
-        card.marks = marks
-
-        if g.line_winner_id is None and card.has_line():
-            g.line_winner_id = current_user.id
-
-        if g.full_winner_id is None and card.is_full():
-            g.full_winner_id = current_user.id
-
-        db.session.commit()
-        return jsonify({
-            "ok": True,
-            "marks": card.marks,
-            "phase": g.phase,
-            "line_winner": db.session.get(User, g.line_winner_id).name if g.line_winner_id else None,
-            "full_winner": db.session.get(User, g.full_winner_id).name if g.full_winner_id else None,
-        })
+        @login_required
+        def mark_slot():
+            g = current_user.game
+            if g.phase != 2:
+                return jsonify({"ok": False, "error": "Game not in playing phase"}), 400
+    
+            card = BingoCard.query.filter_by(
+                game_id=g.id, player_id=current_user.id
+            ).first()
+            if not card:
+                return jsonify({"ok": False, "error": "No card assigned"}), 404
+    
+            try:
+                idx = int(request.form.get("idx", -1))
+            except ValueError:
+                return jsonify({"ok": False, "error": "Bad index"}), 400
+            if not (0 <= idx < 9):
+                return jsonify({"ok": False, "error": "Bad index"}), 400
+    
+            marks = card.marks
+            # Un cop marcada, NO es pot desmarcar
+            if not marks[idx]:
+                marks[idx] = True
+                card.marks = marks
+    
+                # Es continua trackant guanyadors per a la vista de l'admin,
+                # pero ja no es notifica res als jugadors.
+                if g.line_winner_id is None and card.has_line():
+                    g.line_winner_id = current_user.id
+                if g.full_winner_id is None and card.is_full():
+                    g.full_winner_id = current_user.id
+    
+                db.session.commit()
+    
+            return jsonify({
+                "ok": True,
+                "marks": card.marks,
+                "phase": g.phase,
+            })
 
     @app.route("/state")
     @login_required
