@@ -9,21 +9,33 @@
     transform: translate(-50%, -150%);
     background: var(--bg-card);
     color: var(--ink);
-    padding: 1rem 1.5rem;
+    padding: 1rem 1.25rem;
     border: 3px solid var(--ink);
     box-shadow: 6px 6px 0 var(--ink);
     font-family: 'Bowlby One', sans-serif;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     text-align: center;
     z-index: 2000;
     transition: transform 0.4s cubic-bezier(.34,1.56,.64,1);
-    max-width: 90vw;
-    white-space: nowrap;
+    max-width: min(90vw, 420px);
+    line-height: 1.25;
   }
   .toast.toast-show { transform: translate(-50%, 0); }
   .toast-line { background: var(--yellow); color: var(--bg); }
-  .toast-bingo { background: var(--lime); color: var(--bg); font-size: 1.5rem; }
+  .toast-bingo { background: var(--lime); color: var(--bg); font-size: 1.3rem; }
+  @media (max-width: 600px) {
+    .toast { font-size: 0.95rem; padding: 0.85rem 1rem; }
+    .toast-bingo { font-size: 1.1rem; }
+  }
 </style>
+
+<div id="leaderboard-link">
+  {% if completed %}
+    <a href="{{ url_for('leaderboard_view') }}" class="btn btn-lime" style="margin-bottom: 1.5rem; display: inline-block;">
+      🏆 Veure classificació
+    </a>
+  {% endif %}
+</div>
 
 {% if played %}
   <div class="eyebrow">Fase 2 · Has rebut un cartró</div>
@@ -51,6 +63,7 @@
 <script>
   const phase = {{ game.phase }};
   const grid = document.getElementById('play-grid');
+  const leaderboardUrl = "{{ url_for('leaderboard_view') }}";
 
   function showToast(text, type) {
     const t = document.createElement('div');
@@ -62,6 +75,12 @@
       t.classList.remove('toast-show');
       setTimeout(() => t.remove(), 500);
     }, 5000);
+  }
+
+  function showLeaderboardButton() {
+    const wrap = document.getElementById('leaderboard-link');
+    if (!wrap || wrap.querySelector('a')) return; // ja hi és
+    wrap.innerHTML = '<a href="' + leaderboardUrl + '" class="btn btn-lime" style="margin-bottom: 1.5rem; display: inline-block;">🏆 Veure classificació</a>';
   }
 
   function fireConfetti() {
@@ -101,7 +120,7 @@
     grid.addEventListener('click', async (e) => {
       const slot = e.target.closest('.slot');
       if (!slot) return;
-      if (slot.classList.contains('marked')) return; // no desmarcar
+      if (slot.classList.contains('marked')) return;
       const idx = slot.dataset.idx;
       try {
         const r = await fetch("{{ url_for('mark_slot') }}", {
@@ -115,10 +134,11 @@
           data.marks.forEach((m, i) => {
             slots[i].classList.toggle('marked', m);
           });
-          // Celebracions només per al jugador que ho ha fet
           if (data.just_made_bingo) {
             fireFireworks();
             showToast("🏆 BINGO! Has omplert el cartró", "bingo");
+            // El guanyador desbloqueja la classificació
+            setTimeout(showLeaderboardButton, 1500);
           } else if (data.just_made_line) {
             fireConfetti();
             showToast("⚡ Has fet línia!", "line");
@@ -128,7 +148,7 @@
     });
   }
 
-  // Polling només per detectar canvi de fase (admin acaba la partida)
+  // Polling per detectar canvi de fase
   setInterval(async () => {
     try {
       const r = await fetch("{{ url_for('state') }}");
