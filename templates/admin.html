@@ -133,3 +133,15 @@
   </div>
 {% endif %}
 {% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-refresh el panell cada 5s perquè vegis com es van enviant cartrons
+  // sense haver de refrescar manualment. Només si la pestanya està activa.
+  setInterval(() => {
+    if (!document.hidden) {
+      location.reload();
+    }
+  }, 5000);
+</script>
+{% endblock %}
