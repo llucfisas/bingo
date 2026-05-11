@@ -1,14 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Fase 2 · A jugar!{% endblock %}
 {% block content %}
-<div id="winner-area">
-{% if full_winner %}
-  <div class="banner banner-full">🏆 {{ full_winner.name }} HA OMPLERT EL CARTRÓ! 🏆</div>
-{% elif line_winner %}
-  <div class="banner">⚡ Línia! {{ line_winner.name }} ha fet la primera línia ⚡</div>
-{% endif %}
-</div>
-
 {% if played %}
   <div class="eyebrow">Fase 2 · Has rebut un cartró</div>
   <h1>Vigila a <span style="color: var(--lime);">{{ played.target.name }}</span></h1>
@@ -23,7 +15,7 @@
   </div>
 
   <p style="color: var(--ink-dim); font-size: 0.85rem; margin-top: 1rem;">
-    Toca una casella per marcar-la o desmarcar-la. La partida continua encara que algú ompli el cartró.
+    Toca una casella per marcar-la. <strong>Un cop marcada no es pot desmarcar.</strong>
   </p>
 {% else %}
   <p>No tens cap cartró assignat aquesta fase.</p>
@@ -38,6 +30,8 @@
     grid.addEventListener('click', async (e) => {
       const slot = e.target.closest('.slot');
       if (!slot) return;
+      // Si ja està marcada, no fa res (no es pot desmarcar)
+      if (slot.classList.contains('marked')) return;
       const idx = slot.dataset.idx;
       try {
         const r = await fetch("{{ url_for('mark_slot') }}", {
@@ -51,36 +45,16 @@
           data.marks.forEach((m, i) => {
             slots[i].classList.toggle('marked', m);
           });
-          updateBanners(data.line_winner, data.full_winner);
         }
       } catch (err) {}
     });
   }
 
-  function updateBanners(line, full) {
-    const area = document.getElementById('winner-area');
-    if (!area) return;
-    let html = '';
-    if (full) {
-      html += '<div class="banner banner-full">🏆 ' + escapeHtml(full) + ' HA OMPLERT EL CARTRÓ! 🏆</div>';
-    } else if (line) {
-      html += '<div class="banner">⚡ Línia! ' + escapeHtml(line) + ' ha fet la primera línia ⚡</div>';
-    }
-    area.innerHTML = html;
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-    }[c]));
-  }
-
-  // Polling per detectar guanyadors d'altres jugadors i canvis de fase
+  // Polling només per detectar canvi de fase (p.ex. admin acaba la partida)
   setInterval(async () => {
     try {
       const r = await fetch("{{ url_for('state') }}");
       const data = await r.json();
-      updateBanners(data.line_winner, data.full_winner);
       if (data.phase !== phase) {
         location.reload();
       }
