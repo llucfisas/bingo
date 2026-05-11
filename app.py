@@ -214,6 +214,8 @@ def create_app():
             ).first()
             line_winner = db.session.get(User, g.line_winner_id) if g.line_winner_id else None
             full_winner = db.session.get(User, g.full_winner_id) if g.full_winner_id else None
+            # El jugador ha completat el seu cartró? -> pot veure la classificació
+            completed = played.is_full() if played else False
             return render_template(
                 "play_card.html",
                 game=g,
@@ -222,10 +224,11 @@ def create_app():
                 about_me=about_me,
                 line_winner=line_winner,
                 full_winner=full_winner,
+                completed=completed,
             )
 
         return redirect(url_for("index"))
-
+        
     @app.route("/card/submit", methods=["POST"])
     @login_required
     def submit_card():
@@ -334,6 +337,30 @@ def create_app():
         return jsonify({
             "phase": g.phase,
         })
+    @app.route("/leaderboard")
+    @login_required
+    def leaderboard_view():
+        g = current_user.game
+        if g.phase < 2:
+            flash("Encara no hi ha classificació disponible.", "error")
+            return redirect(url_for("game"))
+
+        # Accés només per qui ha fet bingo (cartró ple) o per l'admin
+        my_card = BingoCard.query.filter_by(
+            game_id=g.id, player_id=current_user.id
+        ).first()
+        has_access = (my_card and my_card.is_full()) or current_user.is_admin
+        if not has_access:
+            flash("Has de completar el teu cartró abans de veure la classificació.", "error")
+            return redirect(url_for("game"))
+
+        cards = BingoCard.query.filter_by(game_id=g.id).all()
+        leaderboard = sorted(
+            [c for c in cards if c.player_id is not None],
+            key=lambda c: sum(c.marks),
+            reverse=True,
+        )
+        return render_template("leaderboard.html", game=g, leaderboard=leaderboard)
 
     # ---------- admin ----------
 
